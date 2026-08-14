@@ -88,11 +88,16 @@ visor init --eagle "/absolute/path/to/My Library.library"
 
 Visor treats external sources as read-only.
 
-## 6. Connect Visor to a knowledge system
+## 6. Connect Visor to Engram
 
-Visor supplies visual context; a knowledge system supplies what the agent knows about you and your work. The agent combines both only for the current task.
+Connect Visor to [Engram](https://github.com/ClaudiusMa/engram), the personal knowledge system built to work with Visor. Keep them as separate repositories, install the Visor CLI, then add this instruction to Engram's agent instructions:
 
-Visor is designed to work alongside the open-source [Personal Knowledge System](https://github.com/ClaudiusMa/Personal-Knowledge-System), but the `visor context` command works from any agent workspace or terminal.
+```text
+When a task needs visual direction, run `visor context "<current task>" --format markdown`.
+Use only the returned Visor packet. Treat confirmed feedback as taste and observations as description. Do not scan or modify the complete Visor library.
+```
+
+Engram supplies the agent's knowledge context. Visor supplies its visual context. The agent combines them only for the current task.
 
 ## Privacy
 
