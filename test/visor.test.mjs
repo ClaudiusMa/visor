@@ -7,10 +7,10 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const CLI = path.join(ROOT, "bin", "taste.mjs");
+const CLI = path.join(ROOT, "bin", "visor.mjs");
 
 function makeFixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ego-test-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "visor-test-"));
   const library = path.join(root, "Fixture.library");
   const images = path.join(library, "images");
   fs.mkdirSync(images, { recursive: true });
@@ -34,7 +34,7 @@ function makeFixture() {
 
 function run(home, args) {
   return JSON.parse(execFileSync(process.execPath, [CLI, ...args], {
-    env: { ...process.env, TASTEWARE_HOME: home },
+    env: { ...process.env, VISOR_HOME: home },
     encoding: "utf8",
   }));
 }
@@ -65,7 +65,7 @@ test("scan, exchange, review, profile, and context remain bounded", () => {
     items: [{ id: "eagle:A1", status: "core", like: ["editorial rhythm"], avoid: ["visual clutter"], useFor: ["layout"] }],
   }));
   const rejected = spawnSync(process.execPath, [CLI, "feedback", "import", feedbackFile], {
-    env: { ...process.env, TASTEWARE_HOME: fixture.root }, encoding: "utf8",
+    env: { ...process.env, VISOR_HOME: fixture.root }, encoding: "utf8",
   });
   assert.notEqual(rejected.status, 0);
   run(fixture.root, ["feedback", "import", feedbackFile, "--confirmed"]);
@@ -82,4 +82,30 @@ test("scan, exchange, review, profile, and context remain bounded", () => {
 
   const review = run(fixture.root, ["review", "--count", "2", "--seed", "fixed", "--dry-run"]);
   assert.equal(review.items.length, 2);
+});
+
+test("default library folder is created, scanned, and retrieved", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "visor-folder-test-"));
+  const initialized = run(root, ["init"]);
+  assert.equal(initialized.source.type, "folder");
+  assert.equal(initialized.source.path, path.join(root, "library"));
+
+  const posters = path.join(root, "library", "posters");
+  fs.mkdirSync(posters, { recursive: true });
+  fs.writeFileSync(path.join(posters, "Editorial Grid.jpg"), "fixture");
+  fs.writeFileSync(path.join(posters, "notes.txt"), "not media");
+
+  const update = run(root, ["update"]);
+  assert.equal(update.items, 1);
+  assert.deepEqual(update.byKind, { image: 1 });
+
+  const catalog = fs.readFileSync(path.join(root, "catalog.jsonl"), "utf8").trim();
+  const item = JSON.parse(catalog);
+  assert.match(item.id, /^folder:library:[a-f0-9]{16}$/);
+  assert.equal(item.name, "Editorial Grid");
+  assert.deepEqual(item.folders, ["posters"]);
+
+  const context = run(root, ["context", "editorial", "poster", "--limit", "1"]);
+  assert.equal(context.references.length, 1);
+  assert.equal(context.references[0].id, item.id);
 });

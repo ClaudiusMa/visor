@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "items": [
     {
-      "id": "eagle:REPLACE_ME",
+      "id": "folder:library:REPLACE_ME",
       "summary": "A restrained mobile composition organized around one focal card.",
       "observations": {
         "composition": ["one dominant focal point", "large negative space"],
@@ -17,4 +17,3 @@
     }
   ]
 }
-

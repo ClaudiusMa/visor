@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "items": [
     {
-      "id": "eagle:REPLACE_ME",
+      "id": "folder:library:REPLACE_ME",
       "status": "core",
       "like": ["spatially meaningful card choreography"],
       "avoid": ["device mockup presentation"],
@@ -10,4 +10,3 @@
     }
   ]
 }
-

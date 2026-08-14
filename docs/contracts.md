@@ -1,6 +1,6 @@
 # Portable contracts
 
-Tasteware separates four kinds of data:
+Visor separates four kinds of data:
 
 1. **Catalog** — deterministic facts read from a media source.
 2. **Analysis** — neutral, replaceable observations produced by any multimodal agent.
@@ -16,7 +16,7 @@ The CLI owns validation and storage. It never invokes a particular model API.
   "schemaVersion": 1,
   "items": [
     {
-      "id": "eagle:ITEM_ID",
+      "id": "folder:library:ITEM_ID",
       "summary": "A short neutral description.",
       "observations": {
         "composition": ["one dominant focal point"],
@@ -42,7 +42,7 @@ Observations describe what is visibly present. They must not say that the user l
   "schemaVersion": 1,
   "items": [
     {
-      "id": "eagle:ITEM_ID",
+      "id": "folder:library:ITEM_ID",
       "status": "core",
       "like": ["spatially meaningful card choreography"],
       "avoid": ["device mockup presentation"],
@@ -56,11 +56,11 @@ Allowed statuses are `core`, `exploring`, `reference-only`, and `avoid`. Import 
 
 ## Taste profile
 
-The profile is Markdown. Confirmed principles use `##` sections and cite supporting IDs such as `eagle:ITEM_ID`. Import requires `--confirmed`. Tasteware verifies that cited IDs exist in the catalog.
+The profile is Markdown. Confirmed principles use `##` sections and cite supporting item IDs. Import requires `--confirmed`. Visor verifies that cited IDs exist in the catalog.
 
 ## Context packet
 
-`taste context` returns:
+`visor context` returns:
 
 - the task query;
 - a bounded excerpt from the confirmed profile;
@@ -70,4 +70,4 @@ The profile is Markdown. Confirmed principles use `##` sections and cite support
 - neutral observations;
 - matched terms and omissions.
 
-An external agent may use this packet inside its own workspace. The packet grants no permission to modify Tasteware, a source library, a knowledge system, or a project.
+An external agent may use this packet inside its own workspace. The packet grants no permission to modify Visor, an external source library, a knowledge system, or a project.

@@ -1,14 +1,17 @@
 {
-  "name": "tasteware",
+  "name": "visor",
   "version": "0.1.0",
+  "description": "Local visual context and confirmed taste for AI agents",
   "private": true,
   "type": "module",
   "bin": {
-    "taste": "./bin/taste.mjs"
+    "visor": "./bin/visor.mjs",
+    "taste": "./bin/visor.mjs"
   },
   "scripts": {
     "test": "node --test",
-    "taste": "node bin/taste.mjs"
+    "visor": "node bin/visor.mjs",
+    "taste": "node bin/visor.mjs"
   },
   "engines": {
     "node": ">=18"

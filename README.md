@@ -1,14 +1,12 @@
-# Tasteware
+# Visor
 
-Tasteware lets an AI agent use your visual references while it designs.
+Visor gives AI agents access to your visual context.
 
-Your images and videos stay in your own library. Tasteware reads that library, helps you record what you like or want to avoid, and returns a small set of relevant references for each task.
+Drop images and videos into a private library. Visor indexes them, records the parts of them you like or want to avoid, and gives an agent only the references relevant to what it is creating. Your media stays local and is never committed to GitHub.
 
-> **Current version:** Eagle libraries are supported. Ordinary folders and other mood-board tools are next.
+## 1. Install Visor
 
-## 1. Install
-
-Tasteware requires Node.js 18 or newer.
+Visor requires Node.js 18 or newer.
 
 ```sh
 git clone https://github.com/ClaudiusMa/tasteware.git
@@ -16,75 +14,88 @@ cd tasteware
 npm link
 ```
 
-`npm link` installs the `taste` command. To avoid installing it, replace `taste` below with `node bin/taste.mjs` and run the command from this repository.
+This installs the `visor` command. To avoid installing it, replace `visor` below with `node bin/visor.mjs` and run commands from the repository.
 
-## 2. Connect your library
+## 2. Add your visual references
 
-Point Tasteware at your Eagle library. Do not copy the library into this repository.
-
-```sh
-taste init --library "/absolute/path/to/Your Library.library"
-taste update
-```
-
-Whenever the library changes, refresh the catalog:
-
-```sh
-taste update
-```
-
-Tasteware reads the library without modifying it.
-
-## 3. Use your references
-
-Describe what you are making:
-
-```sh
-taste context "editorial poster with expressive typography" --format markdown
-```
-
-Or tell the agent working on your design:
+The repository includes a private `library/` folder. Put your mood-board images and videos there:
 
 ```text
-Run `taste context "<describe this design task>" --format markdown`.
+library/
+  posters/
+  interfaces/
+  motion/
+```
+
+Everything inside `library/` is ignored by Git except its empty placeholder. Your references will not be uploaded.
+
+Initialize Visor and index the folder:
+
+```sh
+visor init
+visor update
+```
+
+Run `visor update` again whenever you add or remove references.
+
+## 3. Give an AI agent visual context
+
+Ask Visor for references relevant to the current task:
+
+```sh
+visor context "editorial poster with expressive typography" --format markdown
+```
+
+Or add this instruction to any agent workspace:
+
+```text
+Before visual design work, run `visor context "<current task>" --format markdown`.
 Inspect only the returned references. Use confirmed preferences as direction,
-cite the reference IDs you used, and do not modify my source library.
+cite the reference IDs you used, and never modify or scan the complete library.
 ```
 
-Tasteware returns only a small task-specific set of references—not the complete library.
+Visor returns a bounded context packet with media paths, previews, neutral visual observations, and confirmed taste signals.
 
-## 4. Teach Tasteware your taste
+## 4. Teach Visor your taste
 
-A saved image is a reference, not proof that you like every part of it. Tasteware learns through review and explicit confirmation.
-
-Start a review:
+Saving a reference does not mean you like everything about it. Review a small sample:
 
 ```sh
-taste review --count 6 --format markdown
+visor review --count 6 --format markdown
 ```
 
-Ask your agent to show you those references and ask what you like or want to avoid. After you confirm, it should create a file matching [`examples/feedback.json`](examples/feedback.json) and import it with:
+Ask your agent to show you those references and ask what you like, what you want to avoid, and where each reference is useful. After you confirm, it should create a file matching [`examples/feedback.json`](examples/feedback.json) and run:
 
 ```sh
-taste feedback import <feedback.json> --confirmed
+visor feedback import <feedback.json> --confirmed
 ```
 
 For optional visual analysis and profile-building workflows, see [`docs/contracts.md`](docs/contracts.md).
 
-## 5. Connect it to a knowledge system
+## 5. Use an existing library instead
 
-Add this instruction to the knowledge system's agent instructions:
+You can point Visor at another folder:
 
-```text
-When a task involves visual design, run `taste context "<task>" --format markdown`.
-Use only the returned taste packet. Do not scan or copy the complete visual library.
-Treat confirmed feedback as preference and media observations as description only.
+```sh
+visor init --folder "/absolute/path/to/my-mood-board"
 ```
 
-Tasteware is designed to work alongside the open-source [Personal Knowledge System](https://github.com/ClaudiusMa/Personal-Knowledge-System), but it can be called from any agent workspace or terminal.
+Eagle is also supported as an optional example source:
+
+```sh
+visor init --eagle "/absolute/path/to/My Library.library"
+```
+
+Visor treats external sources as read-only.
+
+## 6. Connect Visor to a knowledge system
+
+Visor supplies visual context; a knowledge system supplies what the agent knows about you and your work. The agent combines both only for the current task.
+
+Visor is designed to work alongside the open-source [Personal Knowledge System](https://github.com/ClaudiusMa/Personal-Knowledge-System), but the `visor context` command works from any agent workspace or terminal.
 
 ## Privacy
 
-Your source library is read-only and is never committed to this repository. Tasteware's personal configuration, catalog, analysis, feedback, profile, cache, and review history are also excluded by `.gitignore`.
+The visual library, local configuration, catalog, analysis, feedback, taste profile, generated previews, and review history are ignored by Git. Run `visor --help` for every available command.
 
-Run `taste --help` for every available command. Tasteware is licensed under the MIT License.
+Visor is licensed under the MIT License.

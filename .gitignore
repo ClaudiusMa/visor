@@ -6,4 +6,5 @@ profile.md
 cache/
 state/
 .DS_Store
-
+library/*
+!library/.gitignore

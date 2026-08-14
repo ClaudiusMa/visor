@@ -1,17 +1,20 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const CODE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const DATA_ROOT = process.env.TASTEWARE_HOME
-  ? path.resolve(process.env.TASTEWARE_HOME)
-  : process.env.EGO_HOME
-    ? path.resolve(process.env.EGO_HOME)
-    : CODE_ROOT;
+const DATA_ROOT = process.env.VISOR_HOME
+  ? path.resolve(process.env.VISOR_HOME)
+  : process.env.TASTEWARE_HOME
+    ? path.resolve(process.env.TASTEWARE_HOME)
+    : process.env.EGO_HOME
+      ? path.resolve(process.env.EGO_HOME)
+      : CODE_ROOT;
 const FILES = {
   config: path.join(DATA_ROOT, "config.json"),
   catalog: path.join(DATA_ROOT, "catalog.jsonl"),
@@ -148,9 +151,71 @@ function buildFolderMap(folders, result = new Map(), parents = []) {
 }
 
 function itemKind(extension) {
-  if (extension === "mp4" || extension === "mov" || extension === "webm") return "video";
+  if (["mp4", "mov", "webm", "m4v"].includes(extension)) return "video";
   if (extension === "url") return "link";
   return "image";
+}
+
+const SUPPORTED_FOLDER_EXTENSIONS = new Set([
+  "avif", "bmp", "gif", "heic", "heif", "jpeg", "jpg", "png", "svg", "tif", "tiff", "webp",
+  "m4v", "mov", "mp4", "webm",
+]);
+
+function stableFolderId(sourceName, relativePath) {
+  const safeSource = String(sourceName || "library").toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-|-$/g, "") || "library";
+  const digest = crypto.createHash("sha256").update(relativePath.split(path.sep).join("/")).digest("hex").slice(0, 16);
+  return `folder:${safeSource}:${digest}`;
+}
+
+function walkFiles(directory) {
+  if (!fs.existsSync(directory)) return [];
+  const files = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    if (entry.name.startsWith(".")) continue;
+    const resolved = path.join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...walkFiles(resolved));
+    if (entry.isFile()) files.push(resolved);
+  }
+  return files;
+}
+
+function scanFolder(libraryPath, sourceName = "library") {
+  const resolved = path.resolve(libraryPath);
+  if (!fs.existsSync(resolved)) fs.mkdirSync(resolved, { recursive: true });
+  if (!fs.statSync(resolved).isDirectory()) fail(`Folder source is not a directory: ${resolved}`);
+  return walkFiles(resolved).flatMap((filePath) => {
+    const extension = path.extname(filePath).slice(1).toLowerCase();
+    if (!SUPPORTED_FOLDER_EXTENSIONS.has(extension)) return [];
+    const relativePath = path.relative(resolved, filePath);
+    const sourceId = stableFolderId(sourceName, relativePath).split(":").at(-1);
+    const folder = path.dirname(relativePath);
+    const stats = fs.statSync(filePath);
+    const kind = itemKind(extension);
+    return [{
+      schemaVersion: 1,
+      id: stableFolderId(sourceName, relativePath),
+      source: "folder",
+      sourceId,
+      name: path.basename(filePath, path.extname(filePath)),
+      kind,
+      extension,
+      assetPath: filePath,
+      previewPath: kind === "image" ? filePath : null,
+      storyboardPath: fs.existsSync(path.join(FILES.storyboards, `${sourceId}.jpg`))
+        ? path.join(FILES.storyboards, `${sourceId}.jpg`)
+        : null,
+      sourceUrl: "",
+      tags: [],
+      folderIds: [],
+      folders: folder === "." ? [] : [folder.split(path.sep).join(" / ")],
+      width: null,
+      height: null,
+      durationSeconds: null,
+      palette: [],
+      createdAt: isoFromEpoch(stats.birthtimeMs),
+      modifiedAt: isoFromEpoch(stats.mtimeMs),
+    }];
+  });
 }
 
 function findMediaFiles(itemDirectory, extension) {
@@ -212,13 +277,21 @@ function scanEagle(libraryPath) {
 }
 
 function commandInit(options) {
-  const library = options.library;
-  if (!library) fail("init requires --library <path>");
-  const resolved = path.resolve(String(library));
-  if (!fs.existsSync(path.join(resolved, "metadata.json"))) fail(`Not an Eagle library: ${resolved}`);
   if (fs.existsSync(FILES.config) && !options.force) fail(`Configuration already exists: ${FILES.config}. Use --force to replace it.`);
+  const eaglePath = options.eagle || options.library;
+  const folderPath = options.folder || (!eaglePath ? path.join(DATA_ROOT, "library") : null);
+  let source;
+  if (eaglePath) {
+    const resolved = path.resolve(String(eaglePath));
+    if (!fs.existsSync(path.join(resolved, "metadata.json"))) fail(`Not an Eagle library: ${resolved}`);
+    source = { type: "eagle", path: resolved };
+  } else {
+    const resolved = path.resolve(String(folderPath));
+    fs.mkdirSync(resolved, { recursive: true });
+    source = { type: "folder", id: "library", path: resolved };
+  }
   writeJson(FILES.config, {
-    sources: [{ type: "eagle", path: resolved }],
+    sources: [source],
     context: { maxItems: 6, maxProfileWords: 1200, maxProfileSections: 3 },
     storyboards: { frames: 6 },
   });
@@ -228,14 +301,17 @@ function commandInit(options) {
   if (!fs.existsSync(FILES.profile)) {
     atomicWrite(FILES.profile, "# Taste Profile\n\n_No confirmed principles yet._\n");
   }
-  writeOutput({ status: "initialized", root: DATA_ROOT, library: resolved }, options.format);
+  writeOutput({ status: "initialized", root: DATA_ROOT, source }, options.format);
 }
 
 function commandUpdate(options) {
   const config = loadConfig();
-  const sources = config.sources.filter((source) => source.type === "eagle");
-  if (sources.length === 0) fail("No Eagle source configured");
-  const records = sources.flatMap((source) => scanEagle(path.resolve(source.path)));
+  const records = config.sources.flatMap((source) => {
+    const sourcePath = path.isAbsolute(source.path) ? source.path : path.resolve(DATA_ROOT, source.path);
+    if (source.type === "eagle") return scanEagle(sourcePath);
+    if (source.type === "folder") return scanFolder(sourcePath, source.id || path.basename(sourcePath));
+    fail(`Unsupported source type: ${source.type}`);
+  });
   const unique = new Map(records.map((record) => [record.id, record]));
   const sorted = [...unique.values()].sort((left, right) => left.id.localeCompare(right.id));
   writeJsonl(FILES.catalog, sorted);
@@ -263,18 +339,17 @@ function indexById(records) {
 
 function requireCatalog() {
   const catalog = readJsonl(FILES.catalog);
-  if (catalog.length === 0) fail("The catalog is empty. Run `taste update` first.");
+  if (catalog.length === 0) fail("The catalog is empty. Add media to your library and run `visor update`.");
   return catalog;
 }
 
 function commandInspect(id, options) {
   if (!id) fail("inspect requires an item ID");
-  const normalized = id.includes(":") ? id : `eagle:${id}`;
-  const catalog = indexById(requireCatalog());
-  const item = catalog.get(normalized);
-  if (!item) fail(`Unknown item: ${normalized}`);
-  const analysis = indexById(readJsonl(FILES.analysis)).get(normalized) || null;
-  const feedback = indexById(readJsonl(FILES.feedback)).get(normalized) || null;
+  const catalog = requireCatalog();
+  const item = catalog.find((entry) => entry.id === id || entry.sourceId === id);
+  if (!item) fail(`Unknown item: ${id}`);
+  const analysis = indexById(readJsonl(FILES.analysis)).get(item.id) || null;
+  const feedback = indexById(readJsonl(FILES.feedback)).get(item.id) || null;
   writeOutput({ item, analysis, feedback }, options.format);
 }
 
@@ -283,7 +358,7 @@ function commandStoryboard(target, options) {
   const frames = positiveInteger(options.frames, loadConfig().storyboards.frames);
   const selected = options.all
     ? catalog.filter((item) => item.kind === "video")
-    : catalog.filter((item) => item.id === (target?.includes(":") ? target : `eagle:${target}`));
+    : catalog.filter((item) => item.id === target || item.sourceId === target);
   if (selected.length === 0) fail(options.all ? "No videos found" : `Unknown video: ${target}`);
   const helper = path.join(CODE_ROOT, "bin", "video-storyboard.swift");
   if (!fs.existsSync(helper)) fail(`Missing storyboard helper: ${helper}`);
@@ -416,7 +491,7 @@ function commandProfileExport(options) {
     schemaVersion: 1,
     type: "taste-profile-evidence",
     generatedAt: new Date().toISOString(),
-    instruction: "Propose concise high-level principles supported by confirmed feedback. Cite eagle IDs. Preserve avoid and useFor constraints.",
+    instruction: "Propose concise high-level principles supported by confirmed feedback. Cite item IDs. Preserve avoid and useFor constraints.",
     evidence,
     omitted: Math.max(0, feedback.length - evidence.length),
   }, options.format);
@@ -428,11 +503,11 @@ function commandProfileImport(filePath, options) {
   const markdown = fs.readFileSync(path.resolve(filePath), "utf8").trim();
   if (!markdown) fail("Profile cannot be empty");
   const known = indexById(requireCatalog());
-  const references = [...markdown.matchAll(/\beagle:[A-Za-z0-9_-]+\b/g)].map((match) => match[0]);
+  const references = [...markdown.matchAll(/\b[a-z][a-z0-9_-]*:[A-Za-z0-9_:-]+\b/g)].map((match) => match[0]);
   for (const reference of references) {
     if (!known.has(reference)) fail(`Profile cites unknown item: ${reference}`);
   }
-  if (/^## /m.test(markdown) && references.length === 0) fail("Profile principles must cite at least one eagle:<id>");
+  if (/^## /m.test(markdown) && references.length === 0) fail("Profile principles must cite at least one item ID");
   atomicWrite(FILES.profile, `${markdown}\n`);
   writeOutput({ status: "imported", profile: FILES.profile, evidenceIds: [...new Set(references)] }, options.format);
 }
@@ -688,21 +763,23 @@ function toMarkdown(value) {
 }
 
 function help() {
-  return `Tasteware CLI
+  return `Visor CLI
 
 Usage:
-  taste init --library <Eagle.library>
-  taste update
-  taste inspect <eagle:id>
-  taste storyboard <eagle:id> [--frames 6] [--force]
-  taste storyboard --all [--frames 6] [--force]
-  taste analysis export [--new] [--limit 20]
-  taste analysis import <results.json>
-  taste feedback import <feedback.json> --confirmed
-  taste profile export
-  taste profile import <profile.md> --confirmed
-  taste review [--count 6] [--format markdown] [--dry-run]
-  taste context <task query> [--limit 6] [--format markdown]
+  visor init                              # Use the local library/ folder
+  visor init --folder <path>              # Use another folder
+  visor init --eagle <Eagle.library>      # Use Eagle instead
+  visor update
+  visor inspect <item:id>
+  visor storyboard <item:id> [--frames 6] [--force]
+  visor storyboard --all [--frames 6] [--force]
+  visor analysis export [--new] [--limit 20]
+  visor analysis import <results.json>
+  visor feedback import <feedback.json> --confirmed
+  visor profile export
+  visor profile import <profile.md> --confirmed
+  visor review [--count 6] [--format markdown] [--dry-run]
+  visor context <task query> [--limit 6] [--format markdown]
 `;
 }
 

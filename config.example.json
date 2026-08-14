@@ -1,8 +1,9 @@
 {
   "sources": [
     {
-      "type": "eagle",
-      "path": "/absolute/path/to/Eagle.library"
+      "type": "folder",
+      "id": "library",
+      "path": "library"
     }
   ],
   "context": {
@@ -14,4 +15,3 @@
     "frames": 6
   }
 }
-
