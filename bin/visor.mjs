@@ -417,7 +417,7 @@ function commandAnalysisExport(options) {
     }));
   writeOutput({
     schemaVersion: 1,
-    type: "taste-analysis-batch",
+    type: "visor-analysis-batch",
     generatedAt: new Date().toISOString(),
     instruction: "Describe visible properties neutrally. Do not infer what the user likes.",
     observationFields: OBSERVATION_FIELDS,
@@ -489,7 +489,7 @@ function commandProfileExport(options) {
   }));
   writeOutput({
     schemaVersion: 1,
-    type: "taste-profile-evidence",
+    type: "visor-profile-evidence",
     generatedAt: new Date().toISOString(),
     instruction: "Propose concise high-level principles supported by confirmed feedback. Cite item IDs. Preserve avoid and useFor constraints.",
     evidence,
@@ -605,7 +605,7 @@ function commandContext(query, options) {
   const profile = boundedProfile(query, config);
   const packet = {
     schemaVersion: 1,
-    type: "taste-context",
+    type: "visor-context",
     generatedAt: new Date().toISOString(),
     query,
     profileExcerpt: profile.text,
@@ -692,7 +692,7 @@ function commandReview(options) {
   }
   const packet = {
     schemaVersion: 1,
-    type: "taste-review",
+    type: "visor-review",
     generatedAt: new Date().toISOString(),
     prompts: [
       "Does this still belong in the taste bank?",
@@ -722,9 +722,9 @@ function writeOutput(value, format = "json") {
 }
 
 function toMarkdown(value) {
-  if (value.type === "taste-review") {
+  if (value.type === "visor-review") {
     return [
-      "# Taste Review",
+      "# Visor Review",
       "",
       ...value.items.flatMap((item, index) => [
         `## ${index + 1}. ${item.name}`,
@@ -737,9 +737,9 @@ function toMarkdown(value) {
       ]),
     ].join("\n");
   }
-  if (value.type === "taste-context") {
+  if (value.type === "visor-context") {
     return [
-      "# Taste Context",
+      "# Visor Context",
       "",
       `Task: ${value.query}`,
       "",
