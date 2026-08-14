@@ -8,3 +8,7 @@ state/
 .DS_Store
 library/*
 !library/.gitignore
+
+# Local HAI-Harness operating layer
+/.hai/
+/AGENTS.override.md
