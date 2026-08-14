@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "eagle:REPLACE_ME",
+      "summary": "A restrained mobile composition organized around one focal card.",
+      "observations": {
+        "composition": ["one dominant focal point", "large negative space"],
+        "typography": ["compact sans serif hierarchy"],
+        "color": ["single saturated accent"],
+        "motion": ["staggered card entrance"],
+        "interaction": ["progressive disclosure"],
+        "mood": ["focused", "playful"],
+        "material": [],
+        "imagery": []
+      }
+    }
+  ]
+}
+

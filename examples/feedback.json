@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "eagle:REPLACE_ME",
+      "status": "core",
+      "like": ["spatially meaningful card choreography"],
+      "avoid": ["device mockup presentation"],
+      "useFor": ["mobile onboarding", "progressive disclosure"]
+    }
+  ]
+}
+

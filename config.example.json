@@ -1,0 +1,17 @@
+{
+  "sources": [
+    {
+      "type": "eagle",
+      "path": "/absolute/path/to/Eagle.library"
+    }
+  ],
+  "context": {
+    "maxItems": 6,
+    "maxProfileWords": 1200,
+    "maxProfileSections": 3
+  },
+  "storyboards": {
+    "frames": 6
+  }
+}
+

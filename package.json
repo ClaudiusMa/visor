@@ -1,0 +1,16 @@
+{
+  "name": "tasteware",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "taste": "./bin/taste.mjs"
+  },
+  "scripts": {
+    "test": "node --test",
+    "taste": "node bin/taste.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
