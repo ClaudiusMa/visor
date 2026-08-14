@@ -1,88 +1,90 @@
 # Tasteware
 
-Tasteware is an open-source, local-first taste system for AI agents. It turns a personal visual or multimedia collection into small, evidence-backed context packets that agents can use while designing.
+Tasteware lets an AI agent use your visual references while it designs.
 
-The collection stays in the software or folder chosen by the user. Tasteware keeps only a normalized catalog, replaceable media observations, explicitly confirmed feedback, and an evidence-linked taste profile.
+Your images and videos stay in your own library. Tasteware reads that library, helps you record what you like or want to avoid, and returns a small set of relevant references for each task.
 
-Tasteware is agent- and model-agnostic. Its interface is a dependency-free CLI plus JSON, JSONL, Markdown, files, stdin, and stdout.
+> **Current version:** Eagle libraries are supported. Ordinary folders and other mood-board tools are next.
 
-## Source support
+## 1. Install
 
-The first reference adapter reads an [Eagle](https://eagle.cool/) library directly from disk and treats it as read-only. Eagle is an example source, not a platform dependency.
-
-The catalog contract is source-neutral so adapters for ordinary folders or other asset managers can normalize into the same records. A plain-folder adapter is not implemented yet.
-
-## Setup
-
-Requires Node.js 18 or newer. Video storyboards use the macOS Swift toolchain and AVFoundation; the rest of the CLI is dependency-free.
+Tasteware requires Node.js 18 or newer.
 
 ```sh
-git clone git@github.com:ClaudiusMa/tasteware.git
+git clone https://github.com/ClaudiusMa/tasteware.git
 cd tasteware
-node bin/taste.mjs init --library /absolute/path/to/your/Eagle.library
-node bin/taste.mjs update
+npm link
 ```
 
-The local configuration and all personal taste data are ignored by Git. To keep private state outside the checkout, set `TASTEWARE_HOME` to another directory.
+`npm link` installs the `taste` command. To avoid installing it, replace `taste` below with `node bin/taste.mjs` and run the command from this repository.
 
-## Data boundary
+## 2. Connect your library
 
-Tasteware does not commit or copy a user's source media. The following local files and directories are ignored:
-
-- `config.json`
-- `catalog.jsonl`
-- `analysis.jsonl`
-- `feedback.jsonl`
-- `profile.md`
-- `cache/`
-- `state/`
-
-Machine observations describe media; they are not treated as preference. Only feedback explicitly confirmed by the user can become a taste signal or confirmed profile principle.
-
-## Core workflow
+Point Tasteware at your Eagle library. Do not copy the library into this repository.
 
 ```sh
-# Refresh the normalized catalog from the configured source.
-node bin/taste.mjs update
-
-# Export undescribed items for any multimodal agent.
-node bin/taste.mjs analysis export --new --limit 20 > /tmp/taste-batch.json
-
-# Import schema-valid neutral observations.
-node bin/taste.mjs analysis import /tmp/taste-analysis.json
-
-# Surface a small calibration set.
-node bin/taste.mjs review --count 6 --format markdown
-
-# Import only feedback the user explicitly confirmed.
-node bin/taste.mjs feedback import /tmp/taste-feedback.json --confirmed
-
-# Export bounded evidence for profile synthesis, then import the approved profile.
-node bin/taste.mjs profile export --limit 200 > /tmp/taste-profile-evidence.json
-node bin/taste.mjs profile import /tmp/profile.md --confirmed
-
-# Retrieve taste for an external task.
-node bin/taste.mjs context "calm mobile onboarding with spatial motion" --limit 6
+taste init --library "/absolute/path/to/Your Library.library"
+taste update
 ```
 
-See [`docs/contracts.md`](docs/contracts.md) for the exchange formats and evidence rules.
+Whenever the library changes, refresh the catalog:
 
-## Commands
+```sh
+taste update
+```
 
-- `init --library <path>` — create local configuration and empty private sidecars.
-- `update` — rebuild `catalog.jsonl` from active source records.
-- `inspect <id>` — inspect one normalized item and its derived state.
-- `storyboard <id|--all> [--frames 6]` — create JPEG storyboards for video references.
-- `analysis export [--new] [--limit 20]` — produce a model-neutral analysis batch.
-- `analysis import <file>` — validate and merge neutral media observations.
-- `feedback import <file> --confirmed` — validate and merge user-confirmed taste signals.
-- `profile export` — produce bounded profile-synthesis evidence.
-- `profile import <file> --confirmed` — install an approved evidence-linked profile.
-- `review [--count 6]` — stratified random sampling for calibration.
-- `context <task> [--limit 6]` — return a bounded task-specific taste packet.
+Tasteware reads the library without modifying it.
 
-All commands return JSON unless `--format markdown` is requested.
+## 3. Use your references
 
-## License
+Describe what you are making:
 
-MIT
+```sh
+taste context "editorial poster with expressive typography" --format markdown
+```
+
+Or tell the agent working on your design:
+
+```text
+Run `taste context "<describe this design task>" --format markdown`.
+Inspect only the returned references. Use confirmed preferences as direction,
+cite the reference IDs you used, and do not modify my source library.
+```
+
+Tasteware returns only a small task-specific set of references—not the complete library.
+
+## 4. Teach Tasteware your taste
+
+A saved image is a reference, not proof that you like every part of it. Tasteware learns through review and explicit confirmation.
+
+Start a review:
+
+```sh
+taste review --count 6 --format markdown
+```
+
+Ask your agent to show you those references and ask what you like or want to avoid. After you confirm, it should create a file matching [`examples/feedback.json`](examples/feedback.json) and import it with:
+
+```sh
+taste feedback import <feedback.json> --confirmed
+```
+
+For optional visual analysis and profile-building workflows, see [`docs/contracts.md`](docs/contracts.md).
+
+## 5. Connect it to a knowledge system
+
+Add this instruction to the knowledge system's agent instructions:
+
+```text
+When a task involves visual design, run `taste context "<task>" --format markdown`.
+Use only the returned taste packet. Do not scan or copy the complete visual library.
+Treat confirmed feedback as preference and media observations as description only.
+```
+
+Tasteware is designed to work alongside the open-source [Personal Knowledge System](https://github.com/ClaudiusMa/Personal-Knowledge-System), but it can be called from any agent workspace or terminal.
+
+## Privacy
+
+Your source library is read-only and is never committed to this repository. Tasteware's personal configuration, catalog, analysis, feedback, profile, cache, and review history are also excluded by `.gitignore`.
+
+Run `taste --help` for every available command. Tasteware is licensed under the MIT License.
