@@ -9,8 +9,8 @@ Drop images and videos into a private library. Visor indexes them, records the p
 Visor requires Node.js 18 or newer.
 
 ```sh
-git clone https://github.com/ClaudiusMa/tasteware.git
-cd tasteware
+git clone https://github.com/ClaudiusMa/visor.git
+cd visor
 npm link
 ```
 
