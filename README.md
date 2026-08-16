@@ -4,6 +4,8 @@ Visor gives AI agents access to your visual context.
 
 Drop images and videos into a private library. Visor indexes them, records the parts of them you like or want to avoid, and gives an agent only the references relevant to what it is creating. Your media stays local and is never committed to GitHub.
 
+![Visor visual-context overview](assets/visor-overview.png)
+
 ## 1. Install Visor
 
 Visor requires Node.js 18 or newer.
